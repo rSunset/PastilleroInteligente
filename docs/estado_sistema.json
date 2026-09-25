@@ -1,0 +1,17 @@
+{
+  "configuracion": {
+    "modo_demo": true,
+    "segundos_por_hora_demo": 1,
+    "hora_alarma": "08:00"
+  },
+  "estado_pastillero": {
+    "alarma_sonando": false,
+    "segundos_sin_tomar": 0,
+    "nivel_alerta": 0,
+    "cuidador_confirmo": false
+  },
+  "notificaciones_enviadas": {
+    "alerta_24h_telegram": false,
+    "emergencia_48h_telegram": false
+  }
+}
