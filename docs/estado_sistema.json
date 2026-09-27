@@ -2,10 +2,20 @@
   "configuracion": {
     "modo_demo": true,
     "segundos_por_hora_demo": 1,
-    "hora_alarma": "08:00"
+    "hora_alarma": "07:00",
+    "hora_inicio": "07:00",
+    "tratamientos": {
+      "Paracetamol": 8
+    },
+    "horarios_dia": [
+      "07:00",
+      "15:00",
+      "23:00"
+    ]
   },
   "estado_pastillero": {
     "alarma_sonando": false,
+    "buscar_pastillero": false,
     "segundos_sin_tomar": 0,
     "nivel_alerta": 0,
     "cuidador_confirmo": false

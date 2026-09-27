@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PíldHora | Monitor de Dosis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="dashboard">
+    <header class="topbar">
+        <div class="brand">
+            <h1>PíldHora</h1>
+            <span class="divider">|</span>
+            <span class="subtitle">Monitor de dosis</span>
+        </div>
+        <div class="system-meta">
+            <span>Modo demo: <strong>1 s = 1 h</strong></span>
+            <span>Red: <strong id="txtConexion" class="text-ok">En línea</strong></span>
+        </div>
+    </header>
+
+    <!-- MONITOR CENTRAL -->
+    <section class="panel span-8">
+        <div class="panel-header">
+            <h2 class="panel-title">Estado actual</h2>
+            <span id="badgeEstado" class="status-tag estado-0">Sincronizando</span>
+        </div>
+
+        <div class="hero-grid">
+            <div class="timer-box">
+                <span class="field-label">Tiempo sin toma</span>
+                <div class="timer-display" id="txtTiempo">00 h</div>
+                <span class="helper-text" id="txtProtocoloDetalle">En espera</span>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="field-label">Alarma inicial</span>
+                    <strong class="kpi-value" id="txtHoraProgramada">07:00</strong>
+                </div>
+                <div class="kpi-card">
+                    <span class="field-label">ESP32 (LED / Buzzer)</span>
+                    <div class="actuator-status">
+                        <span id="ledIndicador" class="led-dot"></span>
+                        <strong class="kpi-value" id="txtAlarma">Apagado</strong>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <span class="field-label">Cuidador</span>
+                    <strong class="kpi-value" id="txtCuidador">Pendiente</strong>
+                </div>
+                <div class="kpi-card">
+                    <span class="field-label">Fase</span>
+                    <strong class="kpi-value" id="txtNivelCodigo">Estado 0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="escalation-container">
+            <div class="escalation-labels">
+                <span>0 h</span>
+                <span>24 h: Alerta cuidador</span>
+                <span>48 h: Emergencia</span>
+            </div>
+            <div class="progress-track">
+                <div class="threshold-marker"></div>
+                <div id="barraProgreso" class="progress-fill fill-0"></div>
+            </div>
+            <div class="escalation-stages">
+                <div id="etapa0" class="stage-box active">0. Normal (0-23 h)</div>
+                <div id="etapa1" class="stage-box">1. Cuidador (24-47 h)</div>
+                <div id="etapa2" class="stage-box">2. Emergencia (48 h+)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section class="panel span-4 log-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Historial</h2>
+            <button id="btnLimpiarLog" class="btn-mini">Limpiar</button>
+        </div>
+        <div id="listaEventos" class="log-container"></div>
+    </section>
+
+    <!-- 1. ESQUEMA DE DOSIS -->
+    <section class="panel span-4">
+        <div class="panel-header">
+            <h2 class="panel-title">Esquema de dosis</h2>
+            <button id="btnRecomendar" class="btn-mini">Sugerir inicio</button>
+        </div>
+
+        <div class="schedule-builder">
+            <div class="add-pill-row">
+                <input type="text" id="inputNombrePastilla" placeholder="Medicamento (ej. Paracetamol)">
+                <input type="number" id="inputIntervaloPastilla" min="1" max="24" value="8" title="Intervalo en horas">
+                <span class="unit-label">h</span>
+                <button id="btnAgregarPastilla" class="btn-secondary btn-add">Agregar</button>
+            </div>
+
+            <div id="contenedorIntervalos" class="interval-list"></div>
+
+            <div class="start-time-row">
+                <label class="field-label" for="inputHora">Hora de primera toma</label>
+                <input type="time" id="inputHora" value="07:00">
+            </div>
+
+            <div class="timeline-preview">
+                <span class="field-label">Tomas calculadas (24 h):</span>
+                <div id="listaHorariosDia" class="chips-container"></div>
+            </div>
+        </div>
+
+        <button id="btnGuardarHora" class="btn-primary">Guardar esquema</button>
+    </section>
+
+    <!-- 2. ASISTENCIA DEL CUIDADOR -->
+    <section class="panel span-4">
+        <div class="panel-header">
+            <h2 class="panel-title">Asistencia del cuidador</h2>
+        </div>
+        <p class="helper-text">Disponible a partir de las 24 h para cancelar la emergencia de 48 h.</p>
+        <div class="control-footer">
+            <div class="status-strip">
+                <span>Confirmación:</span>
+                <strong id="txtEstadoConfirmacion">Pendiente</strong>
+            </div>
+            <button id="btnConfirmarCuidador" class="btn-warning" disabled>Confirmar revisión</button>
+        </div>
+    </section>
+
+    <!-- 3. SIMULADOR ESP32 -->
+    <section class="panel span-4 panel-sim">
+        <div class="panel-header">
+            <h2 class="panel-title">Simulador ESP32</h2>
+        </div>
+        <p class="helper-text">Prueba de reloj (1 s = 1 h) y sensor físico.</p>
+        <div class="control-footer">
+            <button id="btnToggleReloj" class="btn-secondary">Iniciar reloj</button>
+            <button id="btnTomarPastilla" class="btn-neutral">Simular toma / Reiniciar</button>
+        </div>
+    </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
