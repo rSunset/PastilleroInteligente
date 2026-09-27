@@ -46,7 +46,7 @@ function calcularNivelAlerta(segundos, cuidadorConfirmo) {
     return 0;
 }
 
-// --- MODO ANTIBROMAS (TODO 1): PROTECCION DE ESCRITURA ---
+// --- MODO ANTIACCIDENTES (TODO 1): PROTECCION DE ESCRITURA ---
 
 function controlesProtegidos() {
     return [
