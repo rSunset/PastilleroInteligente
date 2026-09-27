@@ -87,7 +87,7 @@ function desbloquearEdicion() {
     modoEdicionDesbloqueado = true;
     aplicarEstadoBloqueo();
     reiniciarTemporizadorBloqueo();
-    registrarEvento("Modo antibromas: edición desbloqueada.", "warn");
+    registrarEvento("Modo antiaccidentes: edición desbloqueada.", "warn");
 }
 
 function bloquearEdicion(automatico = false) {
@@ -95,7 +95,7 @@ function bloquearEdicion(automatico = false) {
     clearTimeout(temporizadorAutoBloqueo);
     $("inputConfirmar").value = "";
     aplicarEstadoBloqueo();
-    if (automatico) registrarEvento("Modo antibromas: bloqueo automático aplicado.", "warn");
+    if (automatico) registrarEvento("Modo antiaccidentes: bloqueo automático aplicado.", "warn");
 }
 
 $("inputConfirmar").addEventListener("input", (evento) => {
@@ -106,7 +106,7 @@ $("inputConfirmar").addEventListener("input", (evento) => {
 
 $("btnBloquear").addEventListener("click", () => {
     bloquearEdicion();
-    registrarEvento("Modo antibromas: edición bloqueada manualmente.", "warn");
+    registrarEvento("Modo antiaccidentes: edición bloqueada manualmente.", "warn");
 });
 
 // --- MEDICAMENTOS (KEY-VALUE) Y OPTIMIZADOR Z_24 ---
@@ -156,7 +156,7 @@ function renderizarListaPastillas() {
         fila.innerHTML = `<div><strong>${nombre}</strong><span class="pill-meta">Cada ${intervalo} h</span></div><button class="btn-remove">Quitar</button>`;
         fila.querySelector("button").addEventListener("click", () => {
             if (!modoEdicionDesbloqueado) {
-                registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+                registrarEvento("Acción bloqueada por el modo antiaccidentes.", "warn");
                 return;
             }
 
@@ -173,7 +173,7 @@ function renderizarListaPastillas() {
 
 $("btnAgregarPastilla").addEventListener("click", () => {
     if (!modoEdicionDesbloqueado) {
-        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        registrarEvento("Acción bloqueada por el modo antiaccidentes.", "warn");
         return;
     }
 
@@ -189,7 +189,7 @@ $("btnAgregarPastilla").addEventListener("click", () => {
 
 $("btnRecomendar").addEventListener("click", () => {
     if (!modoEdicionDesbloqueado) {
-        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        registrarEvento("Acción bloqueada por el modo antiaccidentes.", "warn");
         return;
     }
     if (!Object.keys(tratamientosMap).length) return;
@@ -238,7 +238,7 @@ inputHora.addEventListener("input", () => {
 
 $("btnGuardarHora").addEventListener("click", async () => {
     if (!modoEdicionDesbloqueado) {
-        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        registrarEvento("Acción bloqueada por el modo antiaccidentes.", "warn");
         return;
     }
 
