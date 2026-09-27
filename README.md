@@ -11,7 +11,7 @@ URL firebase: `https://pastillero-inteligente-61c54-default-rtdb.firebaseio.com/
 
 ## TODOs Pendientes (Rumbo a la entrega del Jueves 1 de Octubre)
 
-- [ ] **TODO 1 (Modo Antibromas / Protección de escritura):** Solicitar que el usuario escriba la palabra `"confirmar"` en un recuadro antes de permitir agregar/quitar medicamentos o guardar cambios de horario en Firebase.
+- [x] **TODO 1 (Modo Antibromas / Protección de escritura):** Solicitar que el usuario escriba la palabra `"confirmar"` en un recuadro antes de permitir agregar/quitar medicamentos o guardar cambios de horario en Firebase.
 - [ ] **TODO 2 (Localizador acústico del ESP32):** Agregar un botón "Localizar pastillero" en la Web App que cambie `estado_pastillero/buscar_pastillero` a `true` en Firebase para hacer sonar el buzzer del ESP32 hasta encontrarlo.
 - [ ] **TODO 3 (Directorio de Información Médica):** Agregar un botón/panel que despliegue enlaces directos a fuentes oficiales de salud y medicamentos (PLM México, MedlinePlus, Facultad de Medicina UNAM).
 - [ ] **TODO 4 (Alertas en Telegram):** Conectar un Bot de Telegram mediante peticiones HTTP para enviar la alerta de 24 h al cuidador (Estado 1) y la alerta de 48 h a emergencias (Estado 2), usando las banderas `notificaciones_enviadas` para evitar spam.

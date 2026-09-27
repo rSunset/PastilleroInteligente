@@ -8,6 +8,11 @@ let ultimoNivel = null;
 let ultimaAlarma = null;
 let tratamientosMap = { "Paracetamol": 8 };
 
+const PALABRA_CONFIRMACION = "confirmar";
+const SEGUNDOS_AUTO_BLOQUEO = 120;
+let modoEdicionDesbloqueado = false;
+let temporizadorAutoBloqueo = null;
+
 const inputHora = $("inputHora");
 const inputNombre = $("inputNombrePastilla");
 const inputIntervalo = $("inputIntervaloPastilla");
@@ -40,6 +45,69 @@ function calcularNivelAlerta(segundos, cuidadorConfirmo) {
     if (segundos >= 24) return 1;
     return 0;
 }
+
+// --- MODO ANTIBROMAS (TODO 1): PROTECCION DE ESCRITURA ---
+
+function controlesProtegidos() {
+    return [
+        inputNombre,
+        inputIntervalo,
+        $("btnAgregarPastilla"),
+        $("btnRecomendar"),
+        inputHora,
+        $("btnGuardarHora"),
+        ...contenedorIntervalos.querySelectorAll("button")
+    ];
+}
+
+function aplicarEstadoBloqueo() {
+    const bloqueado = !modoEdicionDesbloqueado;
+
+    controlesProtegidos().forEach((elemento) => {
+        if (elemento) elemento.disabled = bloqueado;
+    });
+
+    $("txtBloqueo").innerText = bloqueado ? "Bloqueado" : "Desbloqueado";
+    $("txtBloqueo").className = `gate-tag ${bloqueado ? "gate-locked" : "gate-open"}`;
+    $("panelBloqueo").className = `unlock-gate ${bloqueado ? "gate-locked" : "gate-open"}`;
+    $("btnBloquear").disabled = bloqueado;
+    $("txtAyudaBloqueo").innerText = bloqueado
+        ? "Escribe la palabra confirmar para habilitar la edición de medicamentos y horarios."
+        : "Edición habilitada. Se bloqueará sola tras 2 minutos sin cambios.";
+}
+
+function reiniciarTemporizadorBloqueo() {
+    clearTimeout(temporizadorAutoBloqueo);
+    if (!modoEdicionDesbloqueado) return;
+
+    temporizadorAutoBloqueo = setTimeout(() => bloquearEdicion(true), SEGUNDOS_AUTO_BLOQUEO * 1000);
+}
+
+function desbloquearEdicion() {
+    modoEdicionDesbloqueado = true;
+    aplicarEstadoBloqueo();
+    reiniciarTemporizadorBloqueo();
+    registrarEvento("Modo antibromas: edición desbloqueada.", "warn");
+}
+
+function bloquearEdicion(automatico = false) {
+    modoEdicionDesbloqueado = false;
+    clearTimeout(temporizadorAutoBloqueo);
+    $("inputConfirmar").value = "";
+    aplicarEstadoBloqueo();
+    if (automatico) registrarEvento("Modo antibromas: bloqueo automático aplicado.", "warn");
+}
+
+$("inputConfirmar").addEventListener("input", (evento) => {
+    const coincide = evento.target.value.trim().toLowerCase() === PALABRA_CONFIRMACION;
+    if (coincide && !modoEdicionDesbloqueado) desbloquearEdicion();
+    else if (!coincide && modoEdicionDesbloqueado) bloquearEdicion();
+});
+
+$("btnBloquear").addEventListener("click", () => {
+    bloquearEdicion();
+    registrarEvento("Modo antibromas: edición bloqueada manualmente.", "warn");
+});
 
 // --- MEDICAMENTOS (KEY-VALUE) Y OPTIMIZADOR Z_24 ---
 
@@ -78,6 +146,7 @@ function renderizarListaPastillas() {
     if (!entradas.length) {
         contenedorIntervalos.innerHTML = `<div class="helper-text">Sin medicamentos activos.</div>`;
         listaHorariosDia.innerHTML = "";
+        aplicarEstadoBloqueo();
         return;
     }
 
@@ -86,26 +155,43 @@ function renderizarListaPastillas() {
         fila.className = "interval-item";
         fila.innerHTML = `<div><strong>${nombre}</strong><span class="pill-meta">Cada ${intervalo} h</span></div><button class="btn-remove">Quitar</button>`;
         fila.querySelector("button").addEventListener("click", () => {
+            if (!modoEdicionDesbloqueado) {
+                registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+                return;
+            }
+
             delete tratamientosMap[nombre];
+            reiniciarTemporizadorBloqueo();
             renderizarListaPastillas();
         });
         contenedorIntervalos.appendChild(fila);
     });
 
     actualizarVistaPreviaHorarios();
+    aplicarEstadoBloqueo();
 }
 
 $("btnAgregarPastilla").addEventListener("click", () => {
+    if (!modoEdicionDesbloqueado) {
+        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        return;
+    }
+
     const nombre = inputNombre.value.trim();
     const intervalo = parseInt(inputIntervalo.value, 10);
     if (!nombre || isNaN(intervalo) || intervalo < 1 || intervalo > 24) return;
 
     tratamientosMap[nombre] = intervalo;
     inputNombre.value = "";
+    reiniciarTemporizadorBloqueo();
     renderizarListaPastillas();
 });
 
 $("btnRecomendar").addEventListener("click", () => {
+    if (!modoEdicionDesbloqueado) {
+        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        return;
+    }
     if (!Object.keys(tratamientosMap).length) return;
 
     let mejorHora = "07:00";
@@ -141,12 +227,21 @@ $("btnRecomendar").addEventListener("click", () => {
 
     inputHora.value = mejorHora;
     actualizarVistaPreviaHorarios();
+    reiniciarTemporizadorBloqueo();
     registrarEvento(`Inicio óptimo: ${mejorHora} (ventana máx. sin alarmas: ${maxHorasSueno} h).`, "ok");
 });
 
-inputHora.addEventListener("input", actualizarVistaPreviaHorarios);
+inputHora.addEventListener("input", () => {
+    actualizarVistaPreviaHorarios();
+    reiniciarTemporizadorBloqueo();
+});
 
 $("btnGuardarHora").addEventListener("click", async () => {
+    if (!modoEdicionDesbloqueado) {
+        registrarEvento("Acción bloqueada por el modo antibromas.", "warn");
+        return;
+    }
+
     const horaInicio = inputHora.value;
     const horariosDia = calcularTomasDelDia(horaInicio, tratamientosMap).map((t) => t.hora);
 
@@ -157,6 +252,7 @@ $("btnGuardarHora").addEventListener("click", async () => {
         horarios_dia: horariosDia
     });
     registrarEvento(`Esquema guardado (${Object.keys(tratamientosMap).length} med).`);
+    bloquearEdicion();
     cicloPrincipal();
 });
 
@@ -297,6 +393,7 @@ $("btnTomarPastilla").addEventListener("click", async () => {
 $("btnLimpiarLog").addEventListener("click", () => (listaEventos.innerHTML = ""));
 
 renderizarListaPastillas();
+aplicarEstadoBloqueo();
 registrarEvento("Sistema conectado.");
 setInterval(cicloPrincipal, 1000);
 cicloPrincipal();

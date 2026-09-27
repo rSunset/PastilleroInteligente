@@ -91,6 +91,18 @@
             <button id="btnRecomendar" class="btn-mini">Sugerir inicio</button>
         </div>
 
+        <div id="panelBloqueo" class="unlock-gate gate-locked">
+            <div class="gate-header">
+                <label class="field-label" for="inputConfirmar">Modo antibromas: escritura protegida</label>
+                <strong id="txtBloqueo" class="gate-tag gate-locked" aria-live="polite">Bloqueado</strong>
+            </div>
+            <div class="gate-row">
+                <input type="text" id="inputConfirmar" placeholder="Escribe confirmar para editar" autocomplete="off" spellcheck="false">
+                <button id="btnBloquear" class="btn-mini" disabled>Bloquear</button>
+            </div>
+            <p class="helper-text" id="txtAyudaBloqueo"></p>
+        </div>
+
         <div class="schedule-builder">
             <div class="add-pill-row">
                 <input type="text" id="inputNombrePastilla" placeholder="Medicamento (ej. Paracetamol)">
