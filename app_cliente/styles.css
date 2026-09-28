@@ -39,13 +39,13 @@ body {
 }
 
 .topbar, .panel, .timer-box, .kpi-card, .escalation-container,
-.log-container, .interval-item, .timeline-preview, .status-strip, .modal-box {
+.log-container, .interval-item, .timeline-preview, .status-strip, .modal-box, .health-link-item {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 2px;
 }
 
-.timer-box, .kpi-card, .escalation-container, .interval-item {
+.timer-box, .kpi-card, .escalation-container, .interval-item, .health-link-item {
     background: var(--surface);
 }
 
@@ -63,11 +63,13 @@ body {
     gap: 12px;
 }
 
-.brand, .system-meta, .actuator-status {
+.brand, .system-meta, .actuator-status, .header-actions {
     display: flex;
     align-items: center;
     gap: 12px;
 }
+
+.header-actions { gap: 6px; }
 
 h1 { font-size: 1.25rem; margin: 0; }
 .divider { color: var(--border); }
@@ -205,7 +207,7 @@ h1 { font-size: 1.25rem; margin: 0; }
 .log-entry { padding-bottom: 6px; border-bottom: 1px solid #1a2028; }
 .log-time { color: var(--muted); margin-right: 6px; }
 
-.schedule-builder, .control-footer { display: flex; flex-direction: column; gap: 10px; }
+.schedule-builder, .control-footer, .health-links { display: flex; flex-direction: column; gap: 10px; }
 .schedule-builder { margin-bottom: 12px; }
 .add-pill-row { display: grid; grid-template-columns: 1fr 64px auto auto; gap: 6px; align-items: center; }
 
@@ -232,8 +234,11 @@ input {
     padding: 3px 7px;
     background: var(--surface);
     border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
 }
 .time-chip.madrugada { border-color: var(--warn); color: var(--warn-text); }
+a.time-chip:hover, .health-link-item:hover { border-color: #64748b; }
 
 button {
     width: 100%;
@@ -255,7 +260,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-secondary { background: #283240; color: var(--text); border-color: #3b495c; }
 .btn-neutral { background: var(--bg); color: var(--text); border-color: var(--border); }
 
-/* MODAL POP-UP (MODO ANTIACCIDENTES) */
+/* MODALES POP-UP (TODO 1 Y TODO 3) */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -267,25 +272,26 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     z-index: 100;
 }
 
-.modal-overlay.hidden {
-    display: none;
-}
+.modal-overlay.hidden { display: none; }
 
 .modal-box {
     width: 100%;
-    max-width: 400px;
+    max-width: 440px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-.modal-box .panel-header {
-    margin-bottom: 0;
-}
+.modal-box .panel-header { margin-bottom: 0; }
+.modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-.modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+.health-link-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.85rem;
 }

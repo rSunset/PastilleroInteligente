@@ -88,7 +88,10 @@
     <section class="panel span-4">
         <div class="panel-header">
             <h2 class="panel-title">Esquema de dosis</h2>
-            <button id="btnRecomendar" class="btn-mini">Sugerir inicio</button>
+            <div class="header-actions">
+                <button id="btnInfoSalud" class="btn-mini">Info médica</button>
+                <button id="btnRecomendar" class="btn-mini">Sugerir inicio</button>
+            </div>
         </div>
 
         <div class="schedule-builder">
@@ -115,18 +118,19 @@
         <button id="btnGuardarHora" class="btn-primary">Guardar esquema</button>
     </section>
 
-    <!-- 2. ASISTENCIA DEL CUIDADOR -->
+    <!-- 2. ASISTENCIA DEL CUIDADOR Y LOCALIZADOR -->
     <section class="panel span-4">
         <div class="panel-header">
-            <h2 class="panel-title">Asistencia del cuidador</h2>
+            <h2 class="panel-title">Asistencia y localización</h2>
         </div>
-        <p class="helper-text">Disponible a partir de las 24 h para cancelar la emergencia de 48 h.</p>
+        <p class="helper-text">Confirma la asistencia tras 24 h sin toma o activa el buzzer para encontrar el pastillero.</p>
         <div class="control-footer">
             <div class="status-strip">
-                <span>Confirmación:</span>
+                <span>Confirmación cuidador:</span>
                 <strong id="txtEstadoConfirmacion">Pendiente</strong>
             </div>
             <button id="btnConfirmarCuidador" class="btn-warning" disabled>Confirmar revisión</button>
+            <button id="btnBuscarPastillero" class="btn-secondary">Localizar pastillero (Buzzer)</button>
         </div>
     </section>
 
@@ -143,7 +147,7 @@
     </section>
 </div>
 
-<!-- POP-UP DE CONFIRMACIÓN (MODO ANTIACCIDENTES) -->
+<!-- POP-UP TODO 1: CONFIRMACIÓN DE CAMBIOS -->
 <div id="modalConfirmar" class="modal-overlay hidden">
     <div class="modal-box">
         <div class="panel-header">
@@ -154,6 +158,35 @@
         <div class="modal-actions">
             <button id="btnCancelarModal" class="btn-neutral">Cancelar</button>
             <button id="btnAceptarModal" class="btn-primary" disabled>Confirmar y guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- POP-UP TODO 3: DIRECTORIO DE INFORMACIÓN MÉDICA -->
+<div id="modalSalud" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="panel-header">
+            <h3 class="panel-title">Fuentes oficiales de salud</h3>
+            <button id="btnCerrarSalud" class="btn-mini">Cerrar</button>
+        </div>
+        <p class="helper-text">Consulta dosis, contraindicaciones y fichas técnicas en portales verificados:</p>
+        <div class="health-links">
+            <a href="https://medlineplus.gov/spanish/druginformation.html" target="_blank" rel="noopener noreferrer" class="health-link-item">
+                <strong>MedlinePlus</strong>
+                <span class="helper-text">Biblioteca Nacional de Medicina (Informacion de medicamentos)</span>
+            </a>
+            <a href="https://www.medicamentosplm.com/" target="_blank" rel="noopener noreferrer" class="health-link-item">
+                <strong>Diccionario PLM México</strong>
+                <span class="helper-text">Guía farmacológica y sustancias activas</span>
+            </a>
+            <a href="http://www.facmed.unam.mx/bmnd/" target="_blank" rel="noopener noreferrer" class="health-link-item">
+                <strong>Facultad de Medicina UNAM</strong>
+                <span class="helper-text">Biblioteca Médica Digital de farmacología</span>
+            </a>
+        </div>
+        <div class="timeline-preview">
+            <span class="field-label">Búsqueda rápida de tus medicamentos activos:</span>
+            <div id="listaLinksPastillas" class="chips-container"></div>
         </div>
     </div>
 </div>

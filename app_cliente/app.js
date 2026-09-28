@@ -1,9 +1,12 @@
 const FIREBASE_URL = "https://pastillero-inteligente-61c54-default-rtdb.firebaseio.com";
+const TELEGRAM_TOKEN = "8988433182:AAGajpSmPlujjxgAmYgKsN3G-1s_HGOtHtY";
+const TELEGRAM_CHAT_ID = "8685718046";
 const $ = (id) => document.getElementById(id);
 
 let simuladorActivo = false;
 let procesandoTick = false;
 let esquemaInicialCargado = false;
+let buscandoPastillero = false;
 let ultimoNivel = null;
 let ultimaAlarma = null;
 let tratamientosMap = { "Paracetamol": 8 };
@@ -17,11 +20,14 @@ const contenedorIntervalos = $("contenedorIntervalos");
 const listaHorariosDia = $("listaHorariosDia");
 const listaEventos = $("listaEventos");
 const btnConfirmar = $("btnConfirmarCuidador");
+const btnBuscarPastillero = $("btnBuscarPastillero");
 const btnToggleReloj = $("btnToggleReloj");
 
 const modalConfirmar = $("modalConfirmar");
 const inputConfirmar = $("inputConfirmar");
 const btnAceptarModal = $("btnAceptarModal");
+const modalSalud = $("modalSalud");
+const listaLinksPastillas = $("listaLinksPastillas");
 
 // Helper único para peticiones PATCH a Firebase
 async function patchFirebase(nodo, datos) {
@@ -30,6 +36,27 @@ async function patchFirebase(nodo, datos) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos)
     });
+}
+
+async function enviarTelegram(texto) {
+    if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN.startsWith("PEGA_")) {
+        registrarEvento("Telegram no configurado (falta Token/Chat ID).", "warn");
+        return false;
+    }
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: texto
+            })
+        });
+        return res.ok;
+    } catch {
+        registrarEvento("Error de red al contactar API de Telegram.", "danger");
+        return false;
+    }
 }
 
 function registrarEvento(mensaje, tipo = "normal") {
@@ -152,7 +179,7 @@ $("btnRecomendar").addEventListener("click", () => {
 
 inputHora.addEventListener("input", actualizarVistaPreviaHorarios);
 
-// --- POP-UP DE CONFIRMACIÓN AL FINALIZAR EDICIÓN ---
+// --- TODO 1: POP-UP DE CONFIRMACIÓN AL GUARDAR ---
 
 function cerrarModalConfirmar() {
     modalConfirmar.classList.add("hidden");
@@ -196,6 +223,45 @@ btnAceptarModal.addEventListener("click", async () => {
     cicloPrincipal();
 });
 
+// --- TODO 2: LOCALIZADOR ACÚSTICO DEL PASTILLERO (ESP32) ---
+
+btnBuscarPastillero.addEventListener("click", async () => {
+    const nuevoEstado = !buscandoPastillero;
+    await patchFirebase("estado_pastillero", { buscar_pastillero: nuevoEstado });
+    registrarEvento(
+        nuevoEstado
+            ? "Localizador activado: haciendo sonar buzzer del ESP32."
+            : "Localizador del pastillero desactivado.",
+        nuevoEstado ? "warn" : "normal"
+    );
+    cicloPrincipal();
+});
+
+// --- TODO 3: POP-UP DE INFORMACIÓN MÉDICA ---
+
+$("btnInfoSalud").addEventListener("click", () => {
+    listaLinksPastillas.innerHTML = "";
+    const nombres = Object.keys(tratamientosMap);
+
+    if (!nombres.length) {
+        listaLinksPastillas.innerHTML = `<span class="helper-text">Sin medicamentos registrados.</span>`;
+    } else {
+        nombres.forEach((nombre) => {
+            const link = document.createElement("a");
+            link.className = "time-chip";
+            link.href = `https://vsearch.nlm.nih.gov/vivisimo/cgi-bin/query-meta?v%3Aproject=medlineplus-spanish&query=${encodeURIComponent(nombre)}`;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.innerText = `Buscar: ${nombre}`;
+            listaLinksPastillas.appendChild(link);
+        });
+    }
+
+    modalSalud.classList.remove("hidden");
+});
+
+$("btnCerrarSalud").addEventListener("click", () => modalSalud.classList.add("hidden"));
+
 // --- MONITOR Y SIMULADOR EN TIEMPO REAL ---
 
 function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
@@ -214,10 +280,19 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
         renderizarListaPastillas();
     }
 
+    buscandoPastillero = Boolean(est.buscar_pastillero);
+    btnBuscarPastillero.innerText = buscandoPastillero
+        ? "Detener localizador (Buzzer)"
+        : "Localizar pastillero (Buzzer)";
+    btnBuscarPastillero.className = buscandoPastillero ? "btn-warning" : "btn-secondary";
+
+    const actuadorActivo = est.alarma_sonando || buscandoPastillero;
     $("txtTiempo").innerText = `${String(est.segundos_sin_tomar).padStart(2, "0")} h`;
     $("txtHoraProgramada").innerText = conf.hora_alarma || "07:00";
-    $("txtAlarma").innerText = est.alarma_sonando ? "Sonando" : "Apagado";
-    $("ledIndicador").className = est.alarma_sonando ? "led-dot activo" : "led-dot";
+    $("txtAlarma").innerText = est.alarma_sonando
+        ? "Sonando"
+        : (buscandoPastillero ? "Localizando" : "Apagado");
+    $("ledIndicador").className = actuadorActivo ? "led-dot activo" : "led-dot";
 
     const txtConf = est.cuidador_confirmo ? "Confirmado" : "Pendiente";
     $("txtCuidador").innerText = txtConf;
@@ -268,13 +343,37 @@ async function cicloPrincipal() {
             const est = data.estado_pastillero;
             const segundos = est.segundos_sin_tomar + 1;
             const nuevoEstado = {
+                ...est,
                 alarma_sonando: true,
                 segundos_sin_tomar: segundos,
-                nivel_alerta: calcularNivelAlerta(segundos, est.cuidador_confirmo),
-                cuidador_confirmo: est.cuidador_confirmo
+                nivel_alerta: calcularNivelAlerta(segundos, est.cuidador_confirmo)
             };
             await patchFirebase("estado_pastillero", nuevoEstado);
             data.estado_pastillero = nuevoEstado;
+        }
+
+        // --- TODO 4: DISPARO DE NOTIFICACIONES EN TELEGRAM ---
+        const estActual = data.estado_pastillero;
+        const notif = data.notificaciones_enviadas || {
+            alerta_24h_telegram: false,
+            emergencia_48h_telegram: false
+        };
+        const listaMeds = Object.keys(tratamientosMap).join(", ") || "Sin especificar";
+
+        if (estActual.nivel_alerta === 1 && !notif.alerta_24h_telegram) {
+            await patchFirebase("notificaciones_enviadas", { alerta_24h_telegram: true });
+            const ok = await enviarTelegram(
+                `[PíldHora - Alerta 24 h]\nEl paciente lleva 24 horas sin registrar su toma (${listaMeds}). Por favor verifique su estado y confirme la revisión en el monitor web.`
+            );
+            if (ok) registrarEvento("Telegram: Alerta de 24 h enviada al cuidador.", "warn");
+        }
+
+        if (estActual.nivel_alerta === 2 && !notif.emergencia_48h_telegram) {
+            await patchFirebase("notificaciones_enviadas", { emergencia_48h_telegram: true });
+            const ok = await enviarTelegram(
+                `[PíldHora - EMERGENCIA 48 h]\nHan transcurrido 48 horas sin toma de medicamento (${listaMeds}) y sin confirmación del cuidador. Se requiere atención inmediata.`
+            );
+            if (ok) registrarEvento("Telegram: Alerta de EMERGENCIA 48 h enviada.", "danger");
         }
 
         renderizarInterfaz(data);
@@ -312,6 +411,10 @@ btnToggleReloj.addEventListener("click", async () => {
                 cuidador_confirmo: false,
                 alarma_sonando: true
             });
+            await patchFirebase("notificaciones_enviadas", {
+                alerta_24h_telegram: false,
+                emergencia_48h_telegram: false
+            });
         }
     }
     registrarEvento(simuladorActivo ? "Reloj demo iniciado." : "Reloj demo pausado.");
@@ -322,9 +425,14 @@ $("btnTomarPastilla").addEventListener("click", async () => {
     btnToggleReloj.innerText = "Iniciar reloj";
     await patchFirebase("estado_pastillero", {
         alarma_sonando: false,
+        buscar_pastillero: false,
         segundos_sin_tomar: 0,
         nivel_alerta: 0,
         cuidador_confirmo: false
+    });
+    await patchFirebase("notificaciones_enviadas", {
+        alerta_24h_telegram: false,
+        emergencia_48h_telegram: false
     });
     registrarEvento("Toma registrada / Sistema reiniciado a 0 h.", "ok");
     cicloPrincipal();
