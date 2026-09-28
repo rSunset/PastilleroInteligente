@@ -16,7 +16,7 @@ URL firebase: `https://pastillero-inteligente-61c54-default-rtdb.firebaseio.com/
 - [ ] **TODO 3 (Directorio de Información Médica):** Agregar un botón/panel que despliegue enlaces directos a fuentes oficiales de salud y medicamentos (PLM México, MedlinePlus, Facultad de Medicina UNAM).
 - [ ] **TODO 4 (Alertas en Telegram):** Conectar un Bot de Telegram mediante peticiones HTTP para enviar la alerta de 24 h al cuidador (Estado 1) y la alerta de 48 h a emergencias (Estado 2), usando las banderas `notificaciones_enviadas` para evitar spam.
 - [ ] **TODO 5 (Firmware del ESP32):** Programar `firmware_esp32/pastillero_esp32.ino` en C++ para leer/escribir el JSON de Firebase por Wi-Fi, activar LED/Buzzer y leer el botón físico de toma de pastilla.
-
+- [ ] **TODO 6 (Agregar una forma de capturar los datos del paciente):** Agregar una seccion o una request al inicio de la aplicacion para capturar datos esenciales de la persona a cuida para que puedan ser enviados el bot de telegram asi como el usuario de la persona a la que se le enviara el mensaje y asegurarse que se resguarden sin comprometer su informacion.
 ## Si van a hacer el trabajo con IA pegenle el siguiente comando al iniciarla para que tenga el contexto de lo que estamos haciendo.
 
 Haz clic en el botón de copiar y pega este texto como primer mensaje en ChatGPT, Claude o Gemini antes de pedirle código:
