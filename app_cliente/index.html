@@ -91,18 +91,6 @@
             <button id="btnRecomendar" class="btn-mini">Sugerir inicio</button>
         </div>
 
-        <div id="panelBloqueo" class="unlock-gate gate-locked">
-            <div class="gate-header">
-                <label class="field-label" for="inputConfirmar">Modo antiaccidentes: escritura protegida</label>
-                <strong id="txtBloqueo" class="gate-tag gate-locked" aria-live="polite">Bloqueado</strong>
-            </div>
-            <div class="gate-row">
-                <input type="text" id="inputConfirmar" placeholder="Escribe confirmar para editar" autocomplete="off" spellcheck="false">
-                <button id="btnBloquear" class="btn-mini" disabled>Bloquear</button>
-            </div>
-            <p class="helper-text" id="txtAyudaBloqueo"></p>
-        </div>
-
         <div class="schedule-builder">
             <div class="add-pill-row">
                 <input type="text" id="inputNombrePastilla" placeholder="Medicamento (ej. Paracetamol)">
@@ -153,6 +141,21 @@
             <button id="btnTomarPastilla" class="btn-neutral">Simular toma / Reiniciar</button>
         </div>
     </section>
+</div>
+
+<!-- POP-UP DE CONFIRMACIÓN (MODO ANTIACCIDENTES) -->
+<div id="modalConfirmar" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="panel-header">
+            <h3 class="panel-title">Confirmar cambios</h3>
+        </div>
+        <p class="helper-text">Escribe <strong>confirmar</strong> para aplicar y guardar el nuevo esquema de dosis.</p>
+        <input type="text" id="inputConfirmar" placeholder="Escribe confirmar" autocomplete="off" spellcheck="false">
+        <div class="modal-actions">
+            <button id="btnCancelarModal" class="btn-neutral">Cancelar</button>
+            <button id="btnAceptarModal" class="btn-primary" disabled>Confirmar y guardar</button>
+        </div>
+    </div>
 </div>
 
 <script src="app.js"></script>
