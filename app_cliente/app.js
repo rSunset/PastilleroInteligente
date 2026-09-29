@@ -1,7 +1,24 @@
 const FIREBASE_URL = "https://pastillero-inteligente-61c54-default-rtdb.firebaseio.com";
-const TELEGRAM_TOKEN = "8988433182:AAGajpSmPlujjxgAmYgKsN3G-1s_HGOtHtY";
-const TELEGRAM_CHAT_ID = "8685718046";
 const $ = (id) => document.getElementById(id);
+
+let ultimaHoraAviso = -1; // Candado local anti-spam para la repetición
+
+// --- TODO 6 EXTRA: BLINDANDO EL LOCALSTORAGE ---
+function obtenerConfigDefecto() {
+    return {
+        paciente: { nombre: "", sangre: "", alergias: "", direccion: "" },
+        bot1: { activo: true, horas: 24, repeticion: 2, token: "", chat: "" },
+        bot2: { activo: true, horas: 48, token: "", chat: "" }
+    };
+}
+
+let configLocal;
+try {
+    configLocal = JSON.parse(localStorage.getItem("pildhora_config")) || obtenerConfigDefecto();
+    if (!configLocal.bot1 || !configLocal.paciente) configLocal = obtenerConfigDefecto();
+} catch {
+    configLocal = obtenerConfigDefecto();
+}
 
 let simuladorActivo = false;
 let procesandoTick = false;
@@ -28,33 +45,34 @@ const inputConfirmar = $("inputConfirmar");
 const btnAceptarModal = $("btnAceptarModal");
 const modalSalud = $("modalSalud");
 const listaLinksPastillas = $("listaLinksPastillas");
+const modalAjustes = $("modalAjustes");
 
-// Helper único para peticiones PATCH a Firebase
+// --- DS PARCHE 5: HELPER ROBUSTO PARA FIREBASE ---
 async function patchFirebase(nodo, datos) {
-    await fetch(`${FIREBASE_URL}/${nodo}.json`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(datos)
-    });
-}
-
-async function enviarTelegram(texto) {
-    if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN.startsWith("PEGA_")) {
-        registrarEvento("Telegram no configurado (falta Token/Chat ID).", "warn");
+    try {
+        const res = await fetch(`${FIREBASE_URL}/${nodo}.json`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datos)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return true;
+    } catch (e) {
+        registrarEvento(`Error de red al actualizar base de datos (${nodo}).`, "danger");
         return false;
     }
+}
+
+async function enviarTelegram(token, chatId, texto) {
+    if (!token || !chatId) return false;
     try {
-        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                text: texto
-            })
+            body: JSON.stringify({ chat_id: chatId, text: texto })
         });
-        return res.ok;
+        return res.ok; // DS Parche 3: Requerimos saber si el envío fue exitoso
     } catch {
-        registrarEvento("Error de red al contactar API de Telegram.", "danger");
         return false;
     }
 }
@@ -67,12 +85,73 @@ function registrarEvento(mensaje, tipo = "normal") {
     listaEventos.prepend(item);
 }
 
+// --- DS PARCHE 4: ARREGLO DE EMERGENCIA SILENCIADA ---
 function calcularNivelAlerta(segundos, cuidadorConfirmo) {
+    // 1. La emergencia de 48h es implacable. Si llegan a 48h y no hay toma física, dispara SIEMPRE.
+    if (configLocal.bot2.activo && segundos >= (configLocal.bot2.horas * 1)) return 2;
+
+    // 2. Si el cuidador confirmó, se silencia el aviso recurrente de 24h.
     if (cuidadorConfirmo) return 0;
-    if (segundos >= 48) return 2;
-    if (segundos >= 24) return 1;
+
+    // 3. Si superó 24h y no hay confirmación, Estado 1.
+    if (configLocal.bot1.activo && segundos >= (configLocal.bot1.horas * 1)) return 1;
+
     return 0;
 }
+
+// --- MODAL DE AJUSTES Y PACIENTE ---
+
+function cargarAjustesUI() {
+    $("cfgNombre").value = configLocal.paciente.nombre;
+    $("cfgSangre").value = configLocal.paciente.sangre;
+    $("cfgAlergias").value = configLocal.paciente.alergias;
+    $("cfgDireccion").value = configLocal.paciente.direccion;
+
+    $("cfgBot1Activo").checked = configLocal.bot1.activo;
+    $("cfgBot1Horas").value = configLocal.bot1.horas;
+    $("cfgBot1Repeticion").value = configLocal.bot1.repeticion;
+    $("cfgBot1Token").value = configLocal.bot1.token;
+    $("cfgBot1Chat").value = configLocal.bot1.chat;
+
+    $("cfgBot2Activo").checked = configLocal.bot2.activo;
+    $("cfgBot2Horas").value = configLocal.bot2.horas;
+    $("cfgBot2Token").value = configLocal.bot2.token;
+    $("cfgBot2Chat").value = configLocal.bot2.chat;
+}
+
+$("btnAjustes").addEventListener("click", () => {
+    cargarAjustesUI();
+    modalAjustes.classList.remove("hidden");
+});
+
+$("btnCerrarAjustes").addEventListener("click", () => modalAjustes.classList.add("hidden"));
+
+$("btnGuardarAjustes").addEventListener("click", () => {
+    configLocal.paciente = {
+        nombre: $("cfgNombre").value.trim(),
+        sangre: $("cfgSangre").value.trim(),
+        alergias: $("cfgAlergias").value.trim(),
+        direccion: $("cfgDireccion").value.trim()
+    };
+    configLocal.bot1 = {
+        activo: $("cfgBot1Activo").checked,
+        horas: parseInt($("cfgBot1Horas").value) || 24,
+        repeticion: Math.max(1, parseInt($("cfgBot1Repeticion").value) || 1),
+        token: $("cfgBot1Token").value.trim(),
+        chat: $("cfgBot1Chat").value.trim()
+    };
+    configLocal.bot2 = {
+        activo: $("cfgBot2Activo").checked,
+        horas: parseInt($("cfgBot2Horas").value) || 48,
+        token: $("cfgBot2Token").value.trim(),
+        chat: $("cfgBot2Chat").value.trim()
+    };
+
+    localStorage.setItem("pildhora_config", JSON.stringify(configLocal));
+    modalAjustes.classList.add("hidden");
+    registrarEvento("Ajustes locales del sistema y paciente guardados.", "ok");
+    cicloPrincipal();
+});
 
 // --- MEDICAMENTOS (KEY-VALUE) Y OPTIMIZADOR Z_24 ---
 
@@ -87,14 +166,12 @@ function calcularTomasDelDia(horaInicioStr, mapa) {
             (agenda[hora] = agenda[hora] || []).push(nombre);
         }
     });
-
     return Object.keys(agenda).sort().map((hora) => ({ hora, pastillas: agenda[hora] }));
 }
 
 function actualizarVistaPreviaHorarios() {
     const tomas = calcularTomasDelDia(inputHora.value, tratamientosMap);
     listaHorariosDia.innerHTML = "";
-
     tomas.forEach(({ hora, pastillas }) => {
         const hNum = parseInt(hora.split(":")[0], 10);
         const chip = document.createElement("span");
@@ -124,7 +201,6 @@ function renderizarListaPastillas() {
         });
         contenedorIntervalos.appendChild(fila);
     });
-
     actualizarVistaPreviaHorarios();
 }
 
@@ -140,10 +216,7 @@ $("btnAgregarPastilla").addEventListener("click", () => {
 
 $("btnRecomendar").addEventListener("click", () => {
     if (!Object.keys(tratamientosMap).length) return;
-
-    let mejorHora = "07:00";
-    let menorCosto = Infinity;
-    let maxHorasSueno = 0;
+    let mejorHora = "07:00", menorCosto = Infinity, maxHorasSueno = 0;
 
     for (let hCandidata = 0; hCandidata < 24; hCandidata++) {
         const candidatoStr = `${String(hCandidata).padStart(2, "0")}:00`;
@@ -165,11 +238,7 @@ $("btnRecomendar").addEventListener("click", () => {
             if (dist > mayorVentana) mayorVentana = dist;
         }
 
-        if (costo < menorCosto) {
-            menorCosto = costo;
-            mejorHora = candidatoStr;
-            maxHorasSueno = mayorVentana;
-        }
+        if (costo < menorCosto) { menorCosto = costo; mejorHora = candidatoStr; maxHorasSueno = mayorVentana; }
     }
 
     inputHora.value = mejorHora;
@@ -179,7 +248,7 @@ $("btnRecomendar").addEventListener("click", () => {
 
 inputHora.addEventListener("input", actualizarVistaPreviaHorarios);
 
-// --- TODO 1: POP-UP DE CONFIRMACIÓN AL GUARDAR ---
+// --- POP-UP DE CONFIRMACIÓN AL GUARDAR ---
 
 function cerrarModalConfirmar() {
     modalConfirmar.classList.add("hidden");
@@ -211,38 +280,32 @@ btnAceptarModal.addEventListener("click", async () => {
     const horaInicio = inputHora.value;
     const horariosDia = calcularTomasDelDia(horaInicio, tratamientosMap).map((t) => t.hora);
 
-    await patchFirebase("configuracion", {
+    const exito = await patchFirebase("configuracion", {
         hora_alarma: horaInicio,
         hora_inicio: horaInicio,
         tratamientos: tratamientosMap,
         horarios_dia: horariosDia
     });
 
+    if (exito) {
+        registrarEvento(`Esquema confirmado y guardado en la red (${Object.keys(tratamientosMap).length} med).`, "ok");
+    }
     cerrarModalConfirmar();
-    registrarEvento(`Esquema confirmado y guardado (${Object.keys(tratamientosMap).length} med).`, "ok");
     cicloPrincipal();
 });
 
-// --- TODO 2: LOCALIZADOR ACÚSTICO DEL PASTILLERO (ESP32) ---
-
+// --- LOCALIZADOR ACÚSTICO ---
 btnBuscarPastillero.addEventListener("click", async () => {
     const nuevoEstado = !buscandoPastillero;
     await patchFirebase("estado_pastillero", { buscar_pastillero: nuevoEstado });
-    registrarEvento(
-        nuevoEstado
-            ? "Localizador activado: haciendo sonar buzzer del ESP32."
-            : "Localizador del pastillero desactivado.",
-        nuevoEstado ? "warn" : "normal"
-    );
+    registrarEvento(nuevoEstado ? "Localizador activado: haciendo sonar buzzer." : "Localizador desactivado.", nuevoEstado ? "warn" : "normal");
     cicloPrincipal();
 });
 
-// --- TODO 3: POP-UP DE INFORMACIÓN MÉDICA ---
-
+// --- POP-UP DE INFORMACIÓN MÉDICA ---
 $("btnInfoSalud").addEventListener("click", () => {
     listaLinksPastillas.innerHTML = "";
     const nombres = Object.keys(tratamientosMap);
-
     if (!nombres.length) {
         listaLinksPastillas.innerHTML = `<span class="helper-text">Sin medicamentos registrados.</span>`;
     } else {
@@ -250,16 +313,12 @@ $("btnInfoSalud").addEventListener("click", () => {
             const link = document.createElement("a");
             link.className = "time-chip";
             link.href = `https://vsearch.nlm.nih.gov/vivisimo/cgi-bin/query-meta?v%3Aproject=medlineplus-spanish&query=${encodeURIComponent(nombre)}`;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.innerText = `Buscar: ${nombre}`;
+            link.target = "_blank"; link.rel = "noopener noreferrer"; link.innerText = `Buscar: ${nombre}`;
             listaLinksPastillas.appendChild(link);
         });
     }
-
     modalSalud.classList.remove("hidden");
 });
-
 $("btnCerrarSalud").addEventListener("click", () => modalSalud.classList.add("hidden"));
 
 // --- MONITOR Y SIMULADOR EN TIEMPO REAL ---
@@ -268,40 +327,60 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
     $("txtConexion").innerText = "En línea";
     $("txtConexion").className = "text-ok";
 
-    if (!esquemaInicialCargado && conf) {
+    // DS PARCHE 6: Sincronización en vivo si otro dispositivo cambia la dosis
+    if (conf) {
+        let remoto = {};
         if (conf.tratamientos) {
-            tratamientosMap = {};
             Object.entries(conf.tratamientos).forEach(([k, v]) => {
-                tratamientosMap[k] = typeof v === "object" ? v.intervalo_horas : Number(v);
+                remoto[k] = typeof v === "object" ? v.intervalo_horas : Number(v);
             });
         }
-        if (conf.hora_alarma) inputHora.value = conf.hora_alarma;
-        esquemaInicialCargado = true;
-        renderizarListaPastillas();
+
+        if (!esquemaInicialCargado) {
+            tratamientosMap = remoto;
+            if (conf.hora_alarma) inputHora.value = conf.hora_alarma;
+            esquemaInicialCargado = true;
+            renderizarListaPastillas();
+        } else {
+            const remotoStr = JSON.stringify(remoto);
+            const localStr = JSON.stringify(tratamientosMap);
+            if (remotoStr !== localStr && modalConfirmar.classList.contains("hidden")) {
+                tratamientosMap = remoto;
+                if (conf.hora_alarma) inputHora.value = conf.hora_alarma;
+                renderizarListaPastillas();
+                registrarEvento("Esquema actualizado de forma remota.", "normal");
+            }
+        }
     }
 
     buscandoPastillero = Boolean(est.buscar_pastillero);
-    btnBuscarPastillero.innerText = buscandoPastillero
-        ? "Detener localizador (Buzzer)"
-        : "Localizar pastillero (Buzzer)";
+    btnBuscarPastillero.innerText = buscandoPastillero ? "Detener localizador (Buzzer)" : "Localizar pastillero (Buzzer)";
     btnBuscarPastillero.className = buscandoPastillero ? "btn-warning" : "btn-secondary";
 
     const actuadorActivo = est.alarma_sonando || buscandoPastillero;
     $("txtTiempo").innerText = `${String(est.segundos_sin_tomar).padStart(2, "0")} h`;
     $("txtHoraProgramada").innerText = conf.hora_alarma || "07:00";
-    $("txtAlarma").innerText = est.alarma_sonando
-        ? "Sonando"
-        : (buscandoPastillero ? "Localizando" : "Apagado");
+    $("txtAlarma").innerText = est.alarma_sonando ? "Sonando" : (buscandoPastillero ? "Localizando" : "Apagado");
     $("ledIndicador").className = actuadorActivo ? "led-dot activo" : "led-dot";
 
     const txtConf = est.cuidador_confirmo ? "Confirmado" : "Pendiente";
     $("txtCuidador").innerText = txtConf;
     $("txtEstadoConfirmacion").innerText = txtConf;
     $("txtNivelCodigo").innerText = `Estado ${est.nivel_alerta}`;
-    btnConfirmar.disabled = !(est.segundos_sin_tomar >= 24 && !est.cuidador_confirmo);
 
-    $("barraProgreso").style.width = `${Math.min((est.segundos_sin_tomar / 48) * 100, 100)}%`;
+    // Deshabilita el botón si ya está confirmado o si aún no hay alerta
+    btnConfirmar.disabled = !(est.nivel_alerta >= 1 && !est.cuidador_confirmo);
+
+    let maxHoras = 48;
+    if (configLocal.bot2.activo) maxHoras = configLocal.bot2.horas;
+    else if (configLocal.bot1.activo) maxHoras = configLocal.bot1.horas;
+    else maxHoras = 24;
+
+    $("barraProgreso").style.width = `${Math.min((est.segundos_sin_tomar / maxHoras) * 100, 100)}%`;
     $("barraProgreso").className = `progress-fill fill-${est.nivel_alerta}`;
+
+    $("lblFase1").innerText = configLocal.bot1.activo ? `${configLocal.bot1.horas} h: Cuidador` : "Cuidador (Apagado)";
+    $("lblFase2").innerText = configLocal.bot2.activo ? `${configLocal.bot2.horas} h: Emergencia` : "Emergencia (Apagado)";
 
     [0, 1, 2].forEach((n) => {
         $(`etapa${n}`).className = est.nivel_alerta === n ? "stage-box active" : "stage-box";
@@ -309,8 +388,8 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
 
     const textosEstado = [
         ["Estado 0: Normal", est.cuidador_confirmo ? "Asistencia confirmada por el cuidador" : (est.alarma_sonando ? "Esperando toma de pastilla" : "Sin alertas activas")],
-        ["Estado 1: Alerta 24 h", "Aviso enviado al cuidador"],
-        ["Estado 2: Emergencia 48 h", "Aviso enviado a servicios de emergencia"]
+        [`Estado 1: Alerta ${configLocal.bot1.horas} h`, "Aviso enviado al cuidador"],
+        [`Estado 2: Emergencia ${configLocal.bot2.horas} h`, "Aviso enviado a emergencias"]
     ];
 
     $("badgeEstado").className = `status-tag estado-${est.nivel_alerta}`;
@@ -319,11 +398,6 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
 
     if (ultimaAlarma !== null && ultimaAlarma !== est.alarma_sonando && est.alarma_sonando) {
         registrarEvento("Alarma activada en ESP32.");
-    }
-    if (ultimoNivel !== null && ultimoNivel !== est.nivel_alerta) {
-        if (est.nivel_alerta === 1) registrarEvento("24 h sin toma: Alerta enviada al cuidador.", "warn");
-        else if (est.nivel_alerta === 2) registrarEvento("48 h sin toma: Alerta enviada a emergencias.", "danger");
-        else registrarEvento("Sistema en Estado 0 (Normal).", "ok");
     }
 
     ultimoNivel = est.nivel_alerta;
@@ -352,28 +426,47 @@ async function cicloPrincipal() {
             data.estado_pastillero = nuevoEstado;
         }
 
-        // --- TODO 4: DISPARO DE NOTIFICACIONES EN TELEGRAM ---
         const estActual = data.estado_pastillero;
-        const notif = data.notificaciones_enviadas || {
-            alerta_24h_telegram: false,
-            emergencia_48h_telegram: false
-        };
+        const notif = data.notificaciones_enviadas || { alerta_24h_telegram: false, emergencia_48h_telegram: false };
         const listaMeds = Object.keys(tratamientosMap).join(", ") || "Sin especificar";
+        const msgPaciente = `\n\nDatos Clínicos:\nPaciente: ${configLocal.paciente.nombre || "No registrado"}\nSangre: ${configLocal.paciente.sangre || "N/A"}\nAlergias: ${configLocal.paciente.alergias || "Ninguna"}\nDirección: ${configLocal.paciente.direccion || "No registrada"}`;
+        const horasPasadas = estActual.segundos_sin_tomar;
 
-        if (estActual.nivel_alerta === 1 && !notif.alerta_24h_telegram) {
-            await patchFirebase("notificaciones_enviadas", { alerta_24h_telegram: true });
-            const ok = await enviarTelegram(
-                `[PíldHora - Alerta 24 h]\nEl paciente lleva 24 horas sin registrar su toma (${listaMeds}). Por favor verifique su estado y confirme la revisión en el monitor web.`
-            );
-            if (ok) registrarEvento("Telegram: Alerta de 24 h enviada al cuidador.", "warn");
+        // DS PARCHE 3: BOT 1 (Cuidador) - Evaluado y sellado SOLO tras confirmar envío
+        if (configLocal.bot1.activo && horasPasadas >= configLocal.bot1.horas && !estActual.cuidador_confirmo) {
+
+            if (!notif.alerta_24h_telegram) {
+                const ok = await enviarTelegram(
+                    configLocal.bot1.token, configLocal.bot1.chat,
+                    `[PíldHora - Alerta Preventiva]\nEl paciente lleva ${horasPasadas} horas sin registrar su toma de: ${listaMeds}. Por favor confirme la revisión en el monitor web.` + msgPaciente
+                );
+                // Bloquea el envío en Firebase SÓLO si Telegram lo procesó bien
+                if (ok) {
+                    await patchFirebase("notificaciones_enviadas", { alerta_24h_telegram: true });
+                    registrarEvento("Telegram: Aviso inicial enviado al cuidador.", "warn");
+                }
+            }
+            // Ciclo de insistencia (Nagging)
+            else if (horasPasadas !== ultimaHoraAviso && (horasPasadas - configLocal.bot1.horas) % configLocal.bot1.repeticion === 0) {
+                ultimaHoraAviso = horasPasadas;
+                const ok = await enviarTelegram(
+                    configLocal.bot1.token, configLocal.bot1.chat,
+                    `[PíldHora - Recordatorio]\nEl paciente lleva ${horasPasadas} horas sin registrar su toma de: ${listaMeds}. Por favor confirme la revisión en el monitor web.` + msgPaciente
+                );
+                if (ok) registrarEvento(`Telegram: Aviso repetido enviado (${horasPasadas} h).`, "warn");
+            }
         }
 
-        if (estActual.nivel_alerta === 2 && !notif.emergencia_48h_telegram) {
-            await patchFirebase("notificaciones_enviadas", { emergencia_48h_telegram: true });
+        // DS PARCHE 3: BOT 2 (Emergencias) - Un solo disparo crítico verificado
+        if (configLocal.bot2.activo && estActual.nivel_alerta === 2 && !notif.emergencia_48h_telegram) {
             const ok = await enviarTelegram(
-                `[PíldHora - EMERGENCIA 48 h]\nHan transcurrido 48 horas sin toma de medicamento (${listaMeds}) y sin confirmación del cuidador. Se requiere atención inmediata.`
+                configLocal.bot2.token, configLocal.bot2.chat,
+                `[PíldHora - EMERGENCIA CRÍTICA]\nHan transcurrido ${horasPasadas} horas sin toma de medicamento (${listaMeds}) y el sensor del pastillero sigue sin pulsarse. Se requiere atención médica inmediata.` + msgPaciente
             );
-            if (ok) registrarEvento("Telegram: Alerta de EMERGENCIA 48 h enviada.", "danger");
+            if (ok) {
+                await patchFirebase("notificaciones_enviadas", { emergencia_48h_telegram: true });
+                registrarEvento("Telegram: Alerta crítica enviada a EMERGENCIAS.", "danger");
+            }
         }
 
         renderizarInterfaz(data);
@@ -388,12 +481,9 @@ async function cicloPrincipal() {
 btnConfirmar.addEventListener("click", async () => {
     simuladorActivo = false;
     btnToggleReloj.innerText = "Iniciar reloj";
-    await patchFirebase("estado_pastillero", {
-        cuidador_confirmo: true,
-        nivel_alerta: 0,
-        alarma_sonando: false
-    });
-    registrarEvento("Cuidador confirmó revisión. Emergencia de 48 h cancelada.", "ok");
+    // DS PARCHE 4: La confirmación apaga el sonido y quita la alerta, pero el tiempo NO se perdona.
+    await patchFirebase("estado_pastillero", { cuidador_confirmo: true, alarma_sonando: false });
+    registrarEvento("Cuidador confirmó revisión. Alarmas preventivas silenciadas.", "ok");
     cicloPrincipal();
 });
 
@@ -405,16 +495,9 @@ btnToggleReloj.addEventListener("click", async () => {
         const res = await fetch(`${FIREBASE_URL}/estado_pastillero.json`);
         const est = await res.json();
         if (est.segundos_sin_tomar === 0 || est.cuidador_confirmo) {
-            await patchFirebase("estado_pastillero", {
-                segundos_sin_tomar: 0,
-                nivel_alerta: 0,
-                cuidador_confirmo: false,
-                alarma_sonando: true
-            });
-            await patchFirebase("notificaciones_enviadas", {
-                alerta_24h_telegram: false,
-                emergencia_48h_telegram: false
-            });
+            ultimaHoraAviso = -1;
+            await patchFirebase("estado_pastillero", { segundos_sin_tomar: 0, nivel_alerta: 0, cuidador_confirmo: false, alarma_sonando: true });
+            await patchFirebase("notificaciones_enviadas", { alerta_24h_telegram: false, emergencia_48h_telegram: false });
         }
     }
     registrarEvento(simuladorActivo ? "Reloj demo iniciado." : "Reloj demo pausado.");
@@ -423,17 +506,9 @@ btnToggleReloj.addEventListener("click", async () => {
 $("btnTomarPastilla").addEventListener("click", async () => {
     simuladorActivo = false;
     btnToggleReloj.innerText = "Iniciar reloj";
-    await patchFirebase("estado_pastillero", {
-        alarma_sonando: false,
-        buscar_pastillero: false,
-        segundos_sin_tomar: 0,
-        nivel_alerta: 0,
-        cuidador_confirmo: false
-    });
-    await patchFirebase("notificaciones_enviadas", {
-        alerta_24h_telegram: false,
-        emergencia_48h_telegram: false
-    });
+    ultimaHoraAviso = -1;
+    await patchFirebase("estado_pastillero", { alarma_sonando: false, buscar_pastillero: false, segundos_sin_tomar: 0, nivel_alerta: 0, cuidador_confirmo: false });
+    await patchFirebase("notificaciones_enviadas", { alerta_24h_telegram: false, emergencia_48h_telegram: false });
     registrarEvento("Toma registrada / Sistema reiniciado a 0 h.", "ok");
     cicloPrincipal();
 });
@@ -441,6 +516,6 @@ $("btnTomarPastilla").addEventListener("click", async () => {
 $("btnLimpiarLog").addEventListener("click", () => (listaEventos.innerHTML = ""));
 
 renderizarListaPastillas();
-registrarEvento("Sistema conectado.");
+registrarEvento("Sistema conectado y protegido.");
 setInterval(cicloPrincipal, 1000);
 cicloPrincipal();

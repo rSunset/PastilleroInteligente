@@ -15,6 +15,8 @@
             <span class="subtitle">Monitor de dosis</span>
         </div>
         <div class="system-meta">
+            <button id="btnAjustes" class="btn-secondary btn-mini">Ajustes y Paciente</button>
+            <span class="divider">|</span>
             <span>Modo demo: <strong>1 s = 1 h</strong></span>
             <span>Red: <strong id="txtConexion" class="text-ok">En línea</strong></span>
         </div>
@@ -60,17 +62,17 @@
         <div class="escalation-container">
             <div class="escalation-labels">
                 <span>0 h</span>
-                <span>24 h: Alerta cuidador</span>
-                <span>48 h: Emergencia</span>
+                <span id="lblFase1">24 h: Alerta cuidador</span>
+                <span id="lblFase2">48 h: Emergencia</span>
             </div>
             <div class="progress-track">
                 <div class="threshold-marker"></div>
                 <div id="barraProgreso" class="progress-fill fill-0"></div>
             </div>
             <div class="escalation-stages">
-                <div id="etapa0" class="stage-box active">0. Normal (0-23 h)</div>
-                <div id="etapa1" class="stage-box">1. Cuidador (24-47 h)</div>
-                <div id="etapa2" class="stage-box">2. Emergencia (48 h+)</div>
+                <div id="etapa0" class="stage-box active">0. Normal</div>
+                <div id="etapa1" class="stage-box">1. Cuidador</div>
+                <div id="etapa2" class="stage-box">2. Emergencia</div>
             </div>
         </div>
     </section>
@@ -123,7 +125,7 @@
         <div class="panel-header">
             <h2 class="panel-title">Asistencia y localización</h2>
         </div>
-        <p class="helper-text">Confirma la asistencia tras 24 h sin toma o activa el buzzer para encontrar el pastillero.</p>
+        <p class="helper-text">Confirma la asistencia tras la alerta preventiva o activa el buzzer para encontrar el pastillero.</p>
         <div class="control-footer">
             <div class="status-strip">
                 <span>Confirmación cuidador:</span>
@@ -169,25 +171,62 @@
             <h3 class="panel-title">Fuentes oficiales de salud</h3>
             <button id="btnCerrarSalud" class="btn-mini">Cerrar</button>
         </div>
-        <p class="helper-text">Consulta dosis, contraindicaciones y fichas técnicas en portales verificados:</p>
+        <p class="helper-text">Consulta dosis y contraindicaciones en portales verificados:</p>
         <div class="health-links">
             <a href="https://medlineplus.gov/spanish/druginformation.html" target="_blank" rel="noopener noreferrer" class="health-link-item">
                 <strong>MedlinePlus</strong>
-                <span class="helper-text">Biblioteca Nacional de Medicina (Informacion de medicamentos)</span>
             </a>
             <a href="https://www.medicamentosplm.com/" target="_blank" rel="noopener noreferrer" class="health-link-item">
                 <strong>Diccionario PLM México</strong>
-                <span class="helper-text">Guía farmacológica y sustancias activas</span>
-            </a>
-            <a href="http://www.facmed.unam.mx/bmnd/" target="_blank" rel="noopener noreferrer" class="health-link-item">
-                <strong>Facultad de Medicina UNAM</strong>
-                <span class="helper-text">Biblioteca Médica Digital de farmacología</span>
             </a>
         </div>
         <div class="timeline-preview">
             <span class="field-label">Búsqueda rápida de tus medicamentos activos:</span>
             <div id="listaLinksPastillas" class="chips-container"></div>
         </div>
+    </div>
+</div>
+
+<!-- POP-UP TODO 6: AJUSTES LOCALES Y PACIENTE -->
+<div id="modalAjustes" class="modal-overlay hidden">
+    <div class="modal-box modal-large">
+        <div class="panel-header">
+            <h3 class="panel-title">Ajustes Privados del Sistema</h3>
+            <button id="btnCerrarAjustes" class="btn-mini">Descartar</button>
+        </div>
+        <div class="settings-grid">
+            <div class="settings-col">
+                <h4>Ficha Médica Local</h4>
+                <p class="helper-text">Esta información NO se sube a Firebase. Se envía a Telegram en caso de emergencia.</p>
+                <input type="text" id="cfgNombre" placeholder="Nombre completo del paciente">
+                <input type="text" id="cfgSangre" placeholder="Tipo de sangre (ej. O+)">
+                <input type="text" id="cfgAlergias" placeholder="Alergias o padecimientos">
+                <input type="text" id="cfgDireccion" placeholder="Dirección de emergencia">
+            </div>
+            <div class="settings-col">
+                <h4>Notificaciones Telegram</h4>
+                <div class="bot-card">
+                    <div class="bot-header">
+                        <strong>Bot 1 (Cuidador)</strong>
+                        <label class="switch"><input type="checkbox" id="cfgBot1Activo">Activar</label>
+                    </div>
+                    <div class="bot-row"><span>Disparar a las:</span> <input type="number" id="cfgBot1Horas" min="1" style="width:70px"><span>h</span></div>
+                    <div class="bot-row"><span>Repetir cada:</span> <input type="number" id="cfgBot1Repeticion" min="1" style="width:70px"><span>h</span></div>
+                    <input type="password" id="cfgBot1Token" placeholder="Token API">
+                    <input type="text" id="cfgBot1Chat" placeholder="Chat ID">
+                </div>
+                <div class="bot-card">
+                    <div class="bot-header">
+                        <strong>Bot 2 (Emergencias 911)</strong>
+                        <label class="switch"><input type="checkbox" id="cfgBot2Activo">Activar</label>
+                    </div>
+                    <div class="bot-row"><span>Disparar a las:</span> <input type="number" id="cfgBot2Horas" min="2" style="width:70px"><span>h</span></div>
+                    <input type="password" id="cfgBot2Token" placeholder="Token API">
+                    <input type="text" id="cfgBot2Chat" placeholder="Chat ID">
+                </div>
+            </div>
+        </div>
+        <button id="btnGuardarAjustes" class="btn-primary">Guardar en este dispositivo</button>
     </div>
 </div>
 

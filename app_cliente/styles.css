@@ -39,13 +39,13 @@ body {
 }
 
 .topbar, .panel, .timer-box, .kpi-card, .escalation-container,
-.log-container, .interval-item, .timeline-preview, .status-strip, .modal-box, .health-link-item {
+.log-container, .interval-item, .timeline-preview, .status-strip, .modal-box, .health-link-item, .bot-card {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 2px;
 }
 
-.timer-box, .kpi-card, .escalation-container, .interval-item, .health-link-item {
+.timer-box, .kpi-card, .escalation-container, .interval-item, .health-link-item, .bot-card {
     background: var(--surface);
 }
 
@@ -207,7 +207,7 @@ h1 { font-size: 1.25rem; margin: 0; }
 .log-entry { padding-bottom: 6px; border-bottom: 1px solid #1a2028; }
 .log-time { color: var(--muted); margin-right: 6px; }
 
-.schedule-builder, .control-footer, .health-links { display: flex; flex-direction: column; gap: 10px; }
+.schedule-builder, .control-footer, .health-links, .settings-col { display: flex; flex-direction: column; gap: 10px; }
 .schedule-builder { margin-bottom: 12px; }
 .add-pill-row { display: grid; grid-template-columns: 1fr 64px auto auto; gap: 6px; align-items: center; }
 
@@ -260,7 +260,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-secondary { background: #283240; color: var(--text); border-color: #3b495c; }
 .btn-neutral { background: var(--bg); color: var(--text); border-color: var(--border); }
 
-/* MODALES POP-UP (TODO 1 Y TODO 3) */
+/* MODALES POP-UP */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -281,7 +281,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     display: flex;
     flex-direction: column;
     gap: 14px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
+.modal-large { max-width: 800px; }
 
 .modal-box .panel-header { margin-bottom: 0; }
 .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -295,3 +298,13 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     text-decoration: none;
     font-size: 0.85rem;
 }
+
+/* AJUSTES TODO 6 */
+.settings-grid { display: grid; gap: 20px; grid-template-columns: 1fr; margin-bottom: 10px; }
+@media (min-width: 768px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
+.settings-col h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.bot-card { padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; }
+.bot-header { display: flex; justify-content: space-between; align-items: center; color: var(--text); }
+.bot-row { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.switch { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); }
+.switch input { width: auto; cursor: pointer; }
