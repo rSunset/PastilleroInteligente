@@ -379,6 +379,11 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
     $("barraProgreso").style.width = `${Math.min((est.segundos_sin_tomar / maxHoras) * 100, 100)}%`;
     $("barraProgreso").className = `progress-fill fill-${est.nivel_alerta}`;
 
+    // --- AGREGA ESTAS DOS LÍNEAS NUEVAS AQUÍ ---
+    const umbralPct = configLocal.bot1.activo ? (configLocal.bot1.horas / maxHoras) * 100 : 50;
+    document.querySelector(".threshold-marker").style.left = `${Math.min(umbralPct, 100)}%`;
+    // -------------------------------------------
+
     $("lblFase1").innerText = configLocal.bot1.activo ? `${configLocal.bot1.horas} h: Cuidador` : "Cuidador (Apagado)";
     $("lblFase2").innerText = configLocal.bot2.activo ? `${configLocal.bot2.horas} h: Emergencia` : "Emergencia (Apagado)";
 
