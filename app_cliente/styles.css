@@ -1,4 +1,5 @@
 :root {
+    color-scheme: dark;
     --bg: #0b0d10;
     --panel: #12161b;
     --surface: #181d24;
@@ -321,3 +322,33 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .bot-row { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .switch { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); }
 .switch input { width: auto; cursor: pointer; }
+
+/* ============================================================
+   Mejoras de accesibilidad y diseño
+   ============================================================ */
+
+/* 1. Foco visible */
+:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+
+/* 4. Texto más grande y objetivos táctiles de al menos 44 px */
+html { font-size: 112.5%; }
+button, input:not([type="checkbox"]) { min-height: 44px; }
+.btn-mini, .btn-remove { padding: 8px 14px; }
+
+/* 5. Banner de alerta (nivel 1 y 2) */
+.alert-banner {
+    grid-column: 1 / -1;
+    padding: 14px 20px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: 2px;
+}
+.alert-banner[hidden] { display: none; }
+.alert-banner.estado-2 { animation: pulso-alerta 1.6s ease-in-out infinite; }
+@keyframes pulso-alerta {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .alert-banner.estado-2 { animation: none; }
+}

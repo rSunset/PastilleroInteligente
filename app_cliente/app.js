@@ -396,9 +396,31 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
         [`Estado 2: Emergencia ${configLocal.bot2.horas} h`, "Aviso enviado a emergencias"]
     ];
 
-    $("badgeEstado").className = `status-tag estado-${est.nivel_alerta}`;
-    $("badgeEstado").innerText = textosEstado[est.nivel_alerta][0];
-    $("txtProtocoloDetalle").innerText = textosEstado[est.nivel_alerta][1];
+    const tituloEstado = textosEstado[est.nivel_alerta][0];
+    const detalleEstado = textosEstado[est.nivel_alerta][1];
+
+    const badge = $("badgeEstado");
+    badge.className = `status-tag estado-${est.nivel_alerta}`;
+    if (badge.innerText !== tituloEstado) badge.innerText = tituloEstado;
+    if ($("txtProtocoloDetalle").innerText !== detalleEstado) $("txtProtocoloDetalle").innerText = detalleEstado;
+
+    const banner = $("bannerAlerta");
+    const debeMostrar = est.nivel_alerta !== 0;
+    const textoBanner = `${tituloEstado}. ${detalleEstado}`;
+    const cambioNivel = ultimoNivel !== est.nivel_alerta;
+    if (banner.hidden === debeMostrar) banner.hidden = !debeMostrar;
+    if (banner.textContent !== textoBanner && debeMostrar) {
+        if (cambioNivel) {
+            banner.className = `alert-banner estado-${est.nivel_alerta}`;
+            banner.textContent = "";
+            requestAnimationFrame(() => { banner.textContent = textoBanner; });
+        } else {
+            banner.textContent = textoBanner;
+        }
+    } else if (!debeMostrar && banner.textContent !== "") {
+        banner.textContent = "";
+    }
+    if (banner.className !== `alert-banner estado-${est.nivel_alerta}`) banner.className = `alert-banner estado-${est.nivel_alerta}`;
 
     if (ultimaAlarma !== null && ultimaAlarma !== est.alarma_sonando && est.alarma_sonando) {
         registrarEvento("Alarma activada en ESP32.");
@@ -523,3 +545,10 @@ renderizarListaPastillas();
 registrarEvento("Sistema conectado y protegido.");
 setInterval(cicloPrincipal, 1000);
 cicloPrincipal();
+
+// Accesibilidad: Escape cierra los modales informativos
+document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    modalSalud.classList.add("hidden");
+    modalAjustes.classList.add("hidden");
+});
