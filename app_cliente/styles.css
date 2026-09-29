@@ -158,7 +158,20 @@ h1 { font-size: 1.25rem; margin: 0; }
 }
 
 .escalation-container { padding: 16px; }
-.escalation-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
+.escalation-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    position: relative; /* Permite que el texto flote libremente */
+}
+
+#lblFase1 {
+    position: absolute;
+    transform: translateX(-50%); /* Centra el texto exactamente sobre el corte de la línea */
+    white-space: nowrap;
+}
 
 .progress-track {
     height: 14px;
