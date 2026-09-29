@@ -1,0 +1,7 @@
+# Credenciales locales (ver app_cliente/config.example.js)
+app_cliente/config.js
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
