@@ -2,6 +2,7 @@ const FIREBASE_URL = "https://pastillero-inteligente-61c54-default-rtdb.firebase
 const $ = (id) => document.getElementById(id);
 
 let ultimaHoraAviso = -1; // Candado local anti-spam para la repetición
+let cambiosSinGuardar = false;
 
 // --- TODO 6 EXTRA: BLINDANDO EL LOCALSTORAGE ---
 function obtenerConfigDefecto() {
@@ -197,6 +198,7 @@ function renderizarListaPastillas() {
         fila.innerHTML = `<div><strong>${nombre}</strong><span class="pill-meta">Cada ${intervalo} h</span></div><button class="btn-remove">Quitar</button>`;
         fila.querySelector("button").addEventListener("click", () => {
             delete tratamientosMap[nombre];
+            cambiosSinGuardar = true; // <-- LÍNEA NUEVA
             renderizarListaPastillas();
         });
         contenedorIntervalos.appendChild(fila);
@@ -210,6 +212,7 @@ $("btnAgregarPastilla").addEventListener("click", () => {
     if (!nombre || isNaN(intervalo) || intervalo < 1 || intervalo > 24) return;
 
     tratamientosMap[nombre] = intervalo;
+    cambiosSinGuardar = true; // <-- LÍNEA NUEVA
     inputNombre.value = "";
     renderizarListaPastillas();
 });
@@ -246,7 +249,10 @@ $("btnRecomendar").addEventListener("click", () => {
     registrarEvento(`Inicio óptimo: ${mejorHora} (ventana máx. sin alarmas: ${maxHorasSueno} h).`, "ok");
 });
 
-inputHora.addEventListener("input", actualizarVistaPreviaHorarios);
+inputHora.addEventListener("input", () => {
+    cambiosSinGuardar = true;
+    actualizarVistaPreviaHorarios();
+});
 
 // --- POP-UP DE CONFIRMACIÓN AL GUARDAR ---
 
@@ -288,8 +294,10 @@ btnAceptarModal.addEventListener("click", async () => {
     });
 
     if (exito) {
+        cambiosSinGuardar = false; // <-- LÍNEA NUEVA
         registrarEvento(`Esquema confirmado y guardado en la red (${Object.keys(tratamientosMap).length} med).`, "ok");
     }
+    
     cerrarModalConfirmar();
     cicloPrincipal();
 });
@@ -344,7 +352,7 @@ function renderizarInterfaz({ estado_pastillero: est, configuracion: conf }) {
         } else {
             const remotoStr = JSON.stringify(remoto);
             const localStr = JSON.stringify(tratamientosMap);
-            if (remotoStr !== localStr && modalConfirmar.classList.contains("hidden")) {
+            if (remotoStr !== localStr && !cambiosSinGuardar) {
                 tratamientosMap = remoto;
                 if (conf.hora_alarma) inputHora.value = conf.hora_alarma;
                 renderizarListaPastillas();
